@@ -15,6 +15,7 @@ medevac.bluecrewsurvivepercent = 100 -- Percentage of blue crews that will make 
 medevac.redcrewsurvivepercent = 0 -- Percentage of red crews that will make it out of their vehicles. 100 = all will survive.
 medevac.showbleedtimer = false -- Set to true to see a timer counting down the time left for the wounded to bleed out
 medevac.sar_pilots = true -- Set to true to allow for Search & Rescue missions of downed pilots
+medevac.max_groups = 2 -- Maximum number of groups in a single helicopter
 medevac.immortalcrew = false -- Set to true to make wounded crew immortal
 medevac.invisiblecrew = true -- Set to true to make wounded crew insvisible
 medevac.crewholdfire = true -- Set tot true to have wounded crew hold fire
@@ -96,8 +97,7 @@ medevac.downedPilotCounterBlue = 0
 
 medevac.woundedGroups = {} -- contains the new group of units
 medevac.inTransitGroups = {} -- contain a table for each SAR with all units he has with the
--- original name of the killed group
--- contains the original name of the killed group, indexed by SAR name
+                             -- original name of the killed group
 
 medevac.smokeMarkers = {} -- tracks smoke markers for groups
 medevac.heliVisibleMessage = {} -- tracks if the first message has been sent of the heli being visible
@@ -108,7 +108,13 @@ medevac.heliCloseMessage = {} -- tracks heli close message  ie heli < 500m dista
 
 medevac.sarEjected = {} -- tracks if the pilot has ejected. Units can still get into the helicopter with no pilot if this inst checked
 
-medevac.boardedCount = {} -- counts boarded wounded for each heliUnit
+-- Utility
+
+function tablelength(T)
+  local count = 0
+  for _ in pairs(T) do count = count + 1 end
+  return count
+end
 
 -- Handles all world events
 medevac.eventHandler = {}
@@ -472,8 +478,7 @@ function medevac.checkWoundedGroupStatus(_argument)
             end
 
             -- in transit cleanup
-            medevac.inTransitGroups[_heliName] = nil
-            medevac.boardedCounts[_heliUnit] = nil -- and wipe counter, shagrat
+            medevac.inTransitGroups[_heliName][_woundedGroupName] = nil
             return
          end
          
@@ -573,26 +578,28 @@ function medevac.checkCloseWoundedGroup(_distance, _heliUnit,_heliName,_woundedG
          -- if you land on them, doesnt matter if they were heading to someone else as you're closer, you win! :)
          if (_distance < medevac.loadDistance) then
             -- GET IN!
+            -- check if the SAR has more than 1 groups in it
+            local _heliName = _heliUnit:getName()
+            local _groups = medevac.inTransitGroups[_heliName]
 
-            if medevac.inTransitGroups[_heliUnit:getName()] ~= nil then 
-               --if medevac.boardedCounts[_heliUnit] ~= nil then
-               local _woundedAboard = medevac.boardedCounts[_heliUnit] --shagrat
-               if  _woundedAboard > 1 then -- calculating boarded wounded exceed limit, shagrat
-                  
-                  medevac.displayMessageToSAR(_heliUnit, string.format("%s, %s. We're already crammed with %s guys! No chance to get anyone else in, sorry!", _woundedGroupName, _heliName, _woundedAboard),10)
+            if not _groups then
+               medevac.inTransitGroups[_heliName] = {}
+               _groups = medevac.inTransitGroups[_heliName]
+            end
 
-                  --two groups are in the helicopter
-                  --its full
-
+            if  _groups and tablelength(_groups) >= medivac.max_groups then 
+               env.info("SAR is full!")
+                medevac.displayMessageToSAR(_heliUnit, string.format("%s, %s. We're already crammed with %s guys! No chance to get anyone else in, sorry!", _woundedGroupName, _heliName, "enough"),10)
                   return true
-               end                                                                                                             
-               -- end
             end
             medevac.woundedMoving[_woundedGroupName] = nil
 
-
+            -- init group table if needed
             --remove from wounded groups to stop message about death
-            medevac.inTransitGroups[_heliUnit:getName()] = {originalGroup = medevac.woundedGroups[_woundedGroupName].originalGroup, woundedGroup =_woundedGroupName, side = _heliUnit:getCoalition()}
+            medevac.inTransitGroups[_heliName][_woundedGroupName] =
+               {originalGroup = medevac.woundedGroups[_woundedGroupName].originalGroup,
+                woundedGroup =_woundedGroupName,
+                side = _heliUnit:getCoalition()}
 
             medevac.woundedGroups[_woundedGroupName] = nil
 
@@ -600,7 +607,6 @@ function medevac.checkCloseWoundedGroup(_distance, _heliUnit,_heliName,_woundedG
 
             local _bleedTime = medevac.getBleedTime(_heliUnit)
             local _bleedMinutes = math.floor((_bleedTime/60) + .5) + math.random(1,5) --calculate minutes for message with a random misjudgement of 1 to 5 minutes (I'm evil, I know) ;-) , shagrat
-            --local _woundedBoarded = medevac.boardedCounts[_heliUnit] --store current wounded on board HeliUnit, shagrat
             --NO MASH
             
             if _bleedTime == -1 then
@@ -616,9 +622,11 @@ function medevac.checkCloseWoundedGroup(_distance, _heliUnit,_heliName,_woundedG
                medevac.displayMessageToSAR(_heliUnit, string.format("%s: %s, wounded aboard! Get us back! He's got %s minutes tops!", _heliName,_woundedLeader:getName(),_bleedMinutes ),10)
             end
             
-            medevac.boardedCounts[_heliUnit] = medevac.boardedCounts[_heliUnit] + 1 --update wounded aboard HeliUnit, shagrat
-            
-            timer.scheduleFunction(medevac.scheduledSARFlight, {_heliUnit:getName(), _bleedTime + timer.getTime()}, timer.getTime() + 5)
+            timer.scheduleFunction(medevac.scheduledSARFlight,
+                                   {heliName = _heliUnit:getName(),
+                                    bleedTime =_bleedTime + timer.getTime(),
+                                    groupName = _woundedGroupName},
+                                   timer.getTime() + 5)
 
             return false
          end
@@ -651,9 +659,9 @@ function medevac.checkGroupNotKIA(_woundedGroup,_woundedGroupName,  _heliUnit,_h
 
       for _currentHeli, _groups in pairs(medevac.inTransitGroups) do
 
-         if _groups.woundedGroup == _woundedGroupName then
-
-            if _groups.side == _heliUnit:getCoalition() then
+         if _groups[_woundedGroupName] then
+            local _group = _groups[_woundedGroupName]
+            if _group.side == _heliUnit:getCoalition() then
                inTransit = true
 
                medevac.displayToAllSAR(string.format("%s has been picked up by %s", _woundedGroupName,_currentHeli ), _heliUnit:getCoalition(),_heliName)
@@ -820,9 +828,10 @@ function medevac.scheduledSARFlight(_args)
    --env.info("Bleed timer.", false)
    local _status, _err = pcall(function (_args)
 
-         local _heliUnit = medevac.getSARHeli(_args[1])
-         local _bleedOutTime = _args[2]
-         local _lastMessage = _args[3] -- only show message if its changed if countdown is disabled
+         local _heliUnit = medevac.getSARHeli(_args.heliName)
+         local _bleedOutTime = _args.bleedTime
+         local _lastMessage = _args.message -- only show message if its changed if countdown is disabled
+         local _woundedGroupName = _args.groupName
          
          if (_heliUnit == nil) then
 
@@ -840,7 +849,8 @@ function medevac.scheduledSARFlight(_args)
             -- trigger.action.outTextForGroup(_medevacid, string.format("The wounded has bled out.", _timeleft), 20)
             local _txt = string.format("%s: Ok. We lost him! He is gone! Damn it! -survivor died of his wounds-", _heliUnit:getName())
 
-            medevac.inTransitGroups[_heliUnit:getName()] = nil
+            -- TODO: only delete the one groups
+            medevac.inTransitGroups[_heliUnit:getName()][_woundedGroupName] = nil
 
             medevac.displayMessageToSAR(_heliUnit, _txt,10)
             
@@ -852,7 +862,7 @@ function medevac.scheduledSARFlight(_args)
          if _dist == -1 then
 
             -- Mash Dead
-            medevac.inTransitGroups[_heliUnit:getName()] = nil
+            medevac.inTransitGroups[_heliUnit:getName()][_woundedGroupName] = nil
 
             medevac.displayMessageToSAR(_heliUnit, string.format("%s: NO MASH! The casulties died of despair!", _heliUnit:getName() ),10)
 
@@ -861,7 +871,7 @@ function medevac.scheduledSARFlight(_args)
          
          if  _dist < 200 and _heliUnit:inAir() == false then
 
-            local _originalGroup =   medevac.inTransitGroups[_heliUnit:getName()].originalGroup
+            local _originalGroup =   medevac.inTransitGroups[_heliUnit:getName()][_woundedGroupName].originalGroup
 
             medevac.inTransitGroups[_heliUnit:getName()] = nil
 
@@ -878,7 +888,6 @@ function medevac.scheduledSARFlight(_args)
 
                medevac.displayMessageToSAR(_heliUnit, _txt,10)
             end
-            medevac.boardedCounts[_heliUnit] = nil -- empty Helicopter, shagrat
             return
          end
 
@@ -922,7 +931,12 @@ function medevac.scheduledSARFlight(_args)
             end
          end
          --queue up
-         timer.scheduleFunction(medevac.scheduledSARFlight, { _heliUnit:getName(), _bleedOutTime, _message }, timer.getTime() + 1)
+         timer.scheduleFunction(medevac.scheduledSARFlight,
+                                {heliName = _heliUnit:getName(),
+                                 bleedTime = _bleedOutTime,
+                                 message = _message,
+                                 groupName = _woundedGroupName},
+                                timer.getTime() + 1)
                                end, _args)
    if (not _status) then
       env.error(string.format("Error while BleedTime\n\n%s", _err))
