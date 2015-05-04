@@ -598,7 +598,7 @@ function medevac.checkCloseWoundedGroup(_distance, _heliUnit,_heliName,_woundedG
                _groups = medevac.inTransitGroups[_heliName]
             end
 
-            -- if the heli can't pick them up, give a message and return
+            -- if the heli can't pick them up, show a message and return
             if  _unitsInHelicopter + _woundedCount > medevac.max_units then
                 medevac.displayMessageToSAR(
                    _heliUnit, string.format(
@@ -864,7 +864,7 @@ function medevac.scheduledSARFlight(_args)
             -- trigger.action.outTextForGroup(_medevacid, string.format("The wounded has bled out.", _timeleft), 20)
             local _txt = string.format("%s: Ok. We lost him! He is gone! Damn it! -survivor died of his wounds-", _heliUnit:getName())
 
-            -- TODO: only delete the one groups
+            -- delete only one group
             medevac.inTransitGroups[_heliUnit:getName()][_woundedGroupName] = nil
 
             medevac.displayMessageToSAR(_heliUnit, _txt,10)
