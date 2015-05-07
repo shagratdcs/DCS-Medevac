@@ -35,6 +35,9 @@ medevac.maxWoundedAmount = 4 -- Number of wounded Spawned from a dead vehicle. M
 medevac.movingMessage = "Steady, wounded are on their way!"
 medevac.loadDistance = 25 -- configure distance for troops to get in helicopter in meters
 
+medevac.radioBeaconChance = 50 -- chance that the troops can set up a radio beacon
+medevac.radioSoundFile = "BeatTone.ogg"
+
 radiogen = {}
 radiogen.radioTime = 30	-- time duration for AM/FM messages
 radiogen.radioLoop = 60	-- time for re-setting radio beacons for JIP
@@ -490,7 +493,7 @@ medevac.addBeaconToGroup = function(_woundedGroupName)
    -- group is still wounded but not yet moving
    if medevac.woundedGroups[_woundedGroupName] and not medevac.woundedMoving[_woundedGroupName] then
     env.info(string.format("Adding beacon to group %s at %d", _woundedGroupName, _freq))
-    radiogen.BeaconFM(_woundedGroupName, _freq, "BeatTone.ogg")
+    radiogen.BeaconFM(_woundedGroupName, _freq, medevac.radioSoundFile)
    end
 
    return _freq
@@ -678,14 +681,25 @@ function medevac.initSARForGroup(_downedGroup, _pilot)
 
    local _text
 
-   local _freq = medevac.addBeaconToGroup(_downedGroup:getName())
+   local _randPercent = math.random(1, 100)
+   if _randPercent <= medevac.radioBeaconChance then
+      local _freq = medevac.addBeaconToGroup(_downedGroup:getName())
 
-   if (_pilot) then
-      _text = string.format("%s requests SAR at %s, beacon at %d Mhz",
-                            _leader:getName(), _coordinatesText, _freq)
+      if (_pilot) then
+         _text = string.format("%s requests SAR at %s, beacon at %d Mhz",
+                               _leader:getName(), _coordinatesText, _freq)
+      else
+         _text = string.format("%s requests medevac at %s, beacon at %d Mhz",
+                               _downedGroup:getName(), _coordinatesText, _freq)
+      end
    else
-      _text = string.format("%s requests medevac at %s, beacon at %d Mhz",
-                            _downedGroup:getName(), _coordinatesText, _freq)
+      if (_pilot) then
+         _text = string.format("%s requests SAR at %s",
+                               _leader:getName(), _coordinatesText)
+      else
+         _text = string.format("%s requests medevac at %s",
+                               _downedGroup:getName(), _coordinatesText)
+      end
    end
 
    -- Loop through all the medevac units
