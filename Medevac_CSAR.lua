@@ -15,7 +15,6 @@ medevac.coordaccuracy = 1 -- Precision of the reported coordinates, see MIST-doc
                           -- only applies to _non_ bullseye coords
 medevac.bluecrewsurvivepercent = 100 -- Percentage of blue crews that will make it out of their vehicles. 100 = all will survive.
 medevac.redcrewsurvivepercent = 0 -- Percentage of red crews that will make it out of their vehicles. 100 = all will survive.
-medevac.showbleedtimer = false -- Set to true to see a timer counting down the time left for the wounded to bleed out
 medevac.sar_pilots = true -- Set to true to allow for Search & Rescue missions of downed pilots
 medevac.max_units = 6 -- Maximum number of groups in a single helicopter
 medevac.immortalcrew = false -- Set to true to make wounded crew immortal
@@ -468,7 +467,7 @@ function medevac.eventHandler:onEvent(_event)
                   trigger.action.outTextForCoalition(_unit:getCoalition(),"All units! We got a ".. _unit:getTypeName() .. " down. Chute Spotted!", 10)
                end
 
-               -- SAR wont receive message above
+              
                medevac.initSARForGroup(_spawnedGroup, _isPilot)
             end
 
@@ -871,14 +870,16 @@ function medevac.checkCloseWoundedGroup(_distance, _heliUnit,_heliName,_woundedG
          -- if you land on them, doesnt matter if they were heading to someone else as you're closer, you win! :)
          if (_distance < medevac.loadDistance) then
             -- GET IN!
-
-            -- remove the beacon frequency
-            medevac.radioBeacons[_woundedGroupName] = nil
-
             local _heliName = _heliUnit:getName()
             local _groups = medevac.inTransitGroups[_heliName]
             local _unitsInHelicopter = unitsInHelicopterCount(_heliName)
 
+            -- remove the beacon frequency
+            medevac.radioBeacons[_woundedGroupName] = nil
+            medevac.inTransitGroups[_heliName] = {}
+            local _heliName = _heliUnit:getName()
+            local _groups = medevac.inTransitGroups[_heliName]
+            local _unitsInHelicopter = unitsInHelicopterCount(_heliName)
             -- init table if there is none for this helicopter
             if not _groups then
                medevac.inTransitGroups[_heliName] = {}
@@ -894,16 +895,12 @@ function medevac.checkCloseWoundedGroup(_distance, _heliUnit,_heliName,_woundedG
                   return true
             end
             medevac.woundedMoving[_woundedGroupName] = nil
-
-            -- init group table if needed
             --remove from wounded groups to stop message about death
             medevac.inTransitGroups[_heliName][_woundedGroupName] =
                {originalGroup = medevac.woundedGroups[_woundedGroupName].originalGroup,
                 woundedGroup =_woundedGroupName,
                 woundedCount = _woundedCount, -- used in unitsInHelicopterCount()
                 side = _heliUnit:getCoalition()}
-
-            medevac.woundedGroups[_woundedGroupName] = nil
 
             Group.destroy(_woundedLeader:getGroup())
 
@@ -932,12 +929,10 @@ function medevac.checkCloseWoundedGroup(_distance, _heliUnit,_heliName,_woundedG
                                     bleedTime =_bleedTime + timer.getTime(),
                                     groupName = _woundedGroupName},
                                    timer.getTime() + 5)
-
             return false
          end
 
       else
-
          -- stop moving, head back to smoke if the target heli leaves
          if medevac.woundedMoving[_woundedGroupName] ~= nil and  medevac.woundedMoving[_woundedGroupName].heli == _heliName then
 
@@ -1196,13 +1191,14 @@ function medevac.scheduledSARFlight(_args)
 
             medevac.inTransitGroups[_heliUnit:getName()] = nil
 
-            if (medevac.clonenewgroups) then
+            if medevac.clonenewgroups and _originalGroup ~= "" then
 
-               local _txt = string.format("%s: The wounded are on their way to the\nmedical facilities. Well done!\n\nReinforcment have arrived.",  _heliUnit:getName())
+                local _txt = string.format("%s: The wounded have been taken to the\nmedical clinic. Good job!\n\nReinforcments have arrived.", _heliUnit:getName())
 
                medevac.displayMessageToSAR(_heliUnit, _txt,10)
 
                mist.cloneGroup(_originalGroup, true)
+                
             else
                
                local _txt = string.format("%s: The wounded are on their way to the\nmedical facilities. Well done!", _heliUnit:getName())
@@ -1241,15 +1237,10 @@ function medevac.scheduledSARFlight(_args)
 
          local _txt
 
-         if medevac.showbleedtimer == true then
-            _txt = string.format("%s: %s\n\nThe wounded will bleed out in: %u seconds.", _heliUnit:getName(), _message, _timeLeft)
-            medevac.displayMessageToSAR(_heliUnit, _txt, 5)
-         else
-            --only show message again if its changed so we don't hide other radio messages
-            if _lastMessage ~= _message then
-               _txt = string.format("%s: %s", _heliUnit:getName(), _message)
-               medevac.displayMessageToSAR(_heliUnit, _txt, 10)
-            end
+         --only show message again if its changed so we don't hide other radio messages
+         if _lastMessage ~= _message then
+            _txt = string.format("%s: %s", _heliUnit:getName(), _message)
+            medevac.displayMessageToSAR(_heliUnit, _txt, 10)
          end
          --queue up
          timer.scheduleFunction(medevac.scheduledSARFlight,
@@ -1400,6 +1391,27 @@ function medevac.getWoundedGroup(_groupName)
    end
 end
 
+-- allows manually added wounded troops or downed pilots
+-- Make sure that if you set _isPilot to true, the group only has one soldier in it
+function medevac.injectWoundedGroup(_groupName,_isPilot)
+
+    local _spawnedGroup = Group.getByName(_groupName)
+
+    if _spawnedGroup ~= nil and _spawnedGroup:isActive() then
+
+        medevac.addSpecialParametersToGroup(_spawnedGroup)
+
+        --Set original group to empty string so mist doesnt respawn them if that option is enabled
+        medevac.woundedGroups[_spawnedGroup:getName()] = { originalGroup = "", side = _spawnedGroup:getCoalition() }
+
+        medevac.initSARForGroup(_spawnedGroup, _isPilot)
+
+    else
+
+        trigger.action.outText( "MISSION ERROR - Could not find wounded group ".._groupName.." to add to wounded", 5 )
+    end
+
+end
 
 
 function medevac.convertGroupToTable(_group)
