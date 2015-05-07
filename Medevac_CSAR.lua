@@ -855,6 +855,10 @@ function medevac.checkCloseWoundedGroup(_distance, _heliUnit,_heliName,_woundedG
          -- if you land on them, doesnt matter if they were heading to someone else as you're closer, you win! :)
          if (_distance < medevac.loadDistance) then
             -- GET IN!
+
+            -- remove the beacon frequency
+            medevac.radioBeacons[_woundedGroupName] = nil
+
             local _heliName = _heliUnit:getName()
             local _groups = medevac.inTransitGroups[_heliName]
             local _unitsInHelicopter = unitsInHelicopterCount(_heliName)
@@ -903,6 +907,9 @@ function medevac.checkCloseWoundedGroup(_distance, _heliUnit,_heliName,_woundedG
             else
                medevac.displayMessageToSAR(_heliUnit, string.format("%s: %s, %d wounded aboard! Get us back! He's got %s minutes tops!", _heliName,_woundedLeader:getName(), _woundedCount,_bleedMinutes ),10)
             end
+
+            -- remove the beacon frequency
+            medevac.radioBeacons[_woundedGroupName] = nil
             
             timer.scheduleFunction(medevac.scheduledSARFlight,
                                    {heliName = _heliUnit:getName(),
@@ -959,6 +966,8 @@ function medevac.checkGroupNotKIA(_woundedGroup,_woundedGroupName,  _heliUnit,_h
          --DEAD
 
          medevac.displayToAllSAR(string.format("%s is KIA ", _woundedGroupName), _heliUnit:getCoalition(),_heliName)
+         -- remove the beacon frequency
+         medevac.radioBeacons[_woundedGroupName] = nil
       end
 
       --     medevac.displayMessageToSAR(_heliUnit, string.format("%s: %s is dead", _heliName,_woundedGroupName ),10)
