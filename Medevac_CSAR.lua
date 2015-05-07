@@ -11,6 +11,8 @@ medevac.bluesmokecolor = 0 -- Color of smokemarker for blue side, 0 is green, 1 
 medevac.redsmokecolor = 1 -- Color of smokemarker for red side, 0 is green, 1 is red, 2 is white, 3 is orange and 4 is blue
 medevac.requestdelay = 10 -- Time in seconds before the survivors will request Medevac
 medevac.coordtype = 2 -- Use Lat/Long DDM (0), Lat/Long DMS (1), MGRS (2), Bullseye imperial (3) or Bullseye metric (4) for coordinates.
+medevac.coordaccuracy = 1 -- Precision of the reported coordinates, see MIST-docs at http://wiki.hoggit.us/view/GetMGRSString
+                          -- only applies to _non_ bullseye coords
 medevac.bluecrewsurvivepercent = 100 -- Percentage of blue crews that will make it out of their vehicles. 100 = all will survive.
 medevac.redcrewsurvivepercent = 0 -- Percentage of red crews that will make it out of their vehicles. 100 = all will survive.
 medevac.showbleedtimer = false -- Set to true to see a timer counting down the time left for the wounded to bleed out
@@ -32,6 +34,14 @@ medevac.messageTime = 15 -- Time to show the intial wounded message for in secon
 medevac.maxWoundedAmount = 4 -- Number of wounded Spawned from a dead vehicle. Must be minimum 2(!) recommended 3-5, shagrat
 medevac.movingMessage = "Steady, wounded are on their way!"
 medevac.loadDistance = 25 -- configure distance for troops to get in helicopter in meters
+
+medevac.radioBeaconChance = 50 -- chance that the troops can set up a radio beacon
+medevac.radioSoundFile = "BeatTone.ogg"
+
+radiogen = {}
+radiogen.radioTime = 30	-- time duration for AM/FM messages
+radiogen.radioLoop = 60	-- time for re-setting radio beacons for JIP
+
 -- If you set it less than 25 the troops might not move close enough
 
 -- SETTINGS FOR MISSION DESIGNER ^^^^^^^^^^^^^^^^^^^*
@@ -108,6 +118,9 @@ medevac.heliCloseMessage = {} -- tracks heli close message  ie heli < 500m dista
 
 medevac.sarEjected = {} -- tracks if the pilot has ejected. Units can still get into the helicopter with no pilot if this inst checked
 
+medevac.frequencyOffset = 0 -- offset for radio frequency. Is incremented  with (mod 58) in medevac.addBeaconToGroup
+
+medevac.radioBeacons = {} -- all current beacons
 -- Utility
 
 function tablelength(T)
@@ -125,6 +138,239 @@ function unitsInHelicopterCount(_heliName)
    end
    return count
 end
+
+-- ************************************************************************
+-- ********************** Radio AM/FM & Beacons ***************************
+-- ************************************************************************
+
+-- Radio AM/FM Transmission Configuration.
+-- Script made by Geloxo
+
+-- Use it to configure radio beacons with periodical recall for JIP or to send messages without any group configuration
+
+-- Examples:
+-- radiogen.RadioAM("huey1", 226, "Atmospheric.ogg", "Information") this will send a message with subtitles "Information" from huey1 on freq 226 AM (UHF)
+-- radiogen.RadioFM("huey1", 30, "Atmospheric.ogg", "Information") this will send a message with subtitles "Information" from huey1 on freq 30 FM
+-- radiogen.BeaconAM("huey1", 117, "Atmospheric.ogg") this will set an AM beacon on huey1 on freq 117 AM (VHF)
+-- radiogen.BeaconFM("huey1", 40, "Atmospheric.ogg") this will set a FM beacon on huey1 on freq 40 FM
+-- radiogen.RadioHQ("huey1", 118, "Atmospheric.ogg", "Information") this will send a periodical message with subtitles "Information" from huey1 on freq 118 FM
+
+
+-- encapsulate radiogen module
+do
+
+radiogen.RadioGen = function (groupName, freq, filename, text, radBand, loop, mesDuration)
+
+	-- modulation: 0 --> AM // 1 --> FM
+	-- freq: 119400000 --> 119.4 MHz
+
+	local group = Group.getByName(groupName)
+	if group == nil then
+		return
+	end
+	
+	local groupcontroller = group:getController()
+	local freqMHz = freq * 1000000
+	
+	if filename == nil then
+		return
+	end
+	
+	local radioset = {
+		[1] = {
+			["enabled"] = true,
+			["auto"] = false,
+			["id"] = "WrappedAction",
+			["number"] = 1, -- first task
+			["params"] = {
+				["action"] = {
+					["id"] = "SetFrequency",
+					["params"] = {
+						["modulation"] = radBand,
+						["frequency"] = freqMHz,
+					},
+				},
+			},
+		},
+	}
+	
+	local radiotrans = {
+		[1] = {
+            ["enabled"] = true,
+            ["auto"] = false,
+            ["id"] = "WrappedAction",
+            ["number"] = 2, -- second task
+            ["params"] = {
+                ["action"] = {
+					["id"] = "TransmitMessage",
+                    ["params"] = {
+                        ["loop"] = loop,
+                        ["subtitle"] = text,
+                        ["duration"] = mesDuration,
+                        ["file"] = filename,
+                    },
+                },
+            },
+        },
+	}	
+
+	Controller.setTask(groupcontroller, radioset[1])
+	Controller.setTask(groupcontroller, radiotrans[1])
+        env.info("Tasks are set")
+	
+	return
+end
+
+-----------------------------------------------------------------------------
+
+-- Send single message on AM
+
+radiogen.RadioAM = function (groupName, freq, filename, text)
+
+	-- modulation: 0 --> AM // 1 --> FM
+	-- freq: 119400000 --> 119.4 MHz
+
+	local group = Group.getByName(groupName)
+	if group == nil then
+		return
+	end
+	
+	local groupcontroller = group:getController()
+	local freqMHz = freq * 1000000
+	
+	if filename == nil then
+		trigger.action.outText("CTTS.lua ERROR: missing filename for AM radio sound", 10)
+		return
+	end
+	
+	radiogen.RadioGen(groupName, freq, filename, text, 0, false, radiogen.radioTime)
+		
+	return
+end
+
+-- Send single message on FM
+
+radiogen.RadioFM = function (groupName, freq, filename, text)
+
+	local group = Group.getByName(groupName)
+	if group == nil then
+		return
+	end
+	
+	local groupcontroller = group:getController()
+	local freqMHz = freq * 1000000
+		
+	if filename == nil then
+		trigger.action.outText("CTTS.lua ERROR: missing filename for FM radio sound", 10)
+		return
+	end
+	
+	radiogen.RadioGen(groupName, freq, filename, text, 1, false, radiogen.radioTime)
+	
+	return
+end
+
+-----------------------------------------------------------------------------
+
+-- Beacons (loops)
+
+radiogen.BeaconAMTable = function (arg)
+	radiogen.BeaconAM(arg[1], arg[2], arg[3])
+	
+	return	
+end
+
+radiogen.BeaconFMTable = function(arg)
+	radiogen.BeaconFM(arg[1], arg[2], arg[3])
+	
+	return	
+end
+
+radiogen.RadioHQTable = function(arg)
+	radiogen.RadioHQ(arg[1], arg[2], arg[3], arg[4])
+	
+	return	
+end
+
+-- AM Beacon: localizer loop on AM
+
+radiogen.BeaconAM = function(groupName, freq, filename)
+
+	local group = Group.getByName(groupName)
+	if group == nil then
+		return
+	end
+	
+	local groupcontroller = group:getController()
+	local freqMHz = freq * 1000000
+		
+	if filename == nil then
+		trigger.action.outText("CTTS.lua ERROR: missing filename for AM radio beacon", 10)
+		return
+	end
+	
+	radiogen.RadioGen(groupName, freq, filename, "", 0, true, 5)
+	
+	local newarg = {groupName, freq, filename}
+	timer.scheduleFunction(radiogen.BeaconAMTable, newarg, timer.getTime() + radiogen.radioLoop)	
+	
+	return
+
+end
+
+-- FM Beacon: localizer loop on FM
+
+radiogen.BeaconFM = function(groupName, freq, filename)
+
+	local group = Group.getByName(groupName)
+	if group == nil then
+		return
+	end
+	
+	local groupcontroller = group:getController()
+	local freqMHz = freq * 1000000
+		
+	if filename == nil then
+		trigger.action.outText("CTTS.lua ERROR: missing filename for FM radio beacon", 10)
+		return
+	end
+	
+	radiogen.RadioGen(groupName, freq, filename, "", 1, true, 5)
+	
+	local newarg = {groupName, freq, filename}
+	timer.scheduleFunction(radiogen.BeaconFMTable, newarg, timer.getTime() + radiogen.radioLoop)	
+	
+	return
+
+end
+
+-- ATIS: Send message information periodically on AM
+
+radiogen.RadioHQ = function(groupName, freq, filename, text) -- AM message repetition with subtitles
+
+	local group = Group.getByName(groupName)
+	if group == nil then
+		return
+	end
+	
+	local groupcontroller = group:getController()
+	local freqMHz = freq * 1000000
+		
+	if filename == nil then
+		trigger.action.outText("CTTS.lua ERROR: missing filename for ATIS", 10)
+		return
+	end
+	
+	radiogen.RadioGen(groupName, freq, filename, text, 0, false, radiogen.radioTime)
+	
+	local newarg = {groupName, freq, filename, text}
+	timer.scheduleFunction(radiogen.RadioHQTable, newarg, timer.getTime() + radiogen.radioLoop)	
+	
+	return
+
+end
+
+end -- end radiogen module
 
 -- Handles all world events
 medevac.eventHandler = {}
@@ -231,6 +477,26 @@ function medevac.eventHandler:onEvent(_event)
    if (not status) then
       env.error(string.format("Error while handling event %s",err), medevac.displayerrordialog)
    end
+end
+
+medevac.addBeaconToGroup = function(_woundedGroupName)
+   local _freq
+   if medevac.radioBeacons[_woundedGroupName] then
+      _freq = medevac.radioBeacons[_woundedGroupName]
+   else
+      -- For FM: start 30 and add the offset, then inc the offset.
+      _freq = 30 + medevac.frequencyOffset
+      medevac.frequencyOffset = (medevac.frequencyOffset + 2) % 58
+      medevac.radioBeacons[_woundedGroupName] = _freq
+   end
+
+   -- group is still wounded but not yet moving
+   if medevac.woundedGroups[_woundedGroupName] and not medevac.woundedMoving[_woundedGroupName] then
+    env.info(string.format("Adding beacon to group %s at %d", _woundedGroupName, _freq))
+    radiogen.BeaconFM(_woundedGroupName, _freq, medevac.radioSoundFile)
+   end
+
+   return _freq
 end
 
 medevac.addSpecialParametersToGroup = function(_spawnedGroup)
@@ -415,10 +681,25 @@ function medevac.initSARForGroup(_downedGroup, _pilot)
 
    local _text
 
-   if (_pilot) then
-      _text = string.format("%s requests SAR at %s", _leader:getName(), _coordinatesText)
+   local _randPercent = math.random(1, 100)
+   if _randPercent <= medevac.radioBeaconChance then
+      local _freq = medevac.addBeaconToGroup(_downedGroup:getName())
+
+      if (_pilot) then
+         _text = string.format("%s requests SAR at %s, beacon at %d Mhz",
+                               _leader:getName(), _coordinatesText, _freq)
+      else
+         _text = string.format("%s requests medevac at %s, beacon at %d Mhz",
+                               _downedGroup:getName(), _coordinatesText, _freq)
+      end
    else
-      _text = string.format("%s requests medevac at %s", _downedGroup:getName(), _coordinatesText)
+      if (_pilot) then
+         _text = string.format("%s requests SAR at %s",
+                               _leader:getName(), _coordinatesText)
+      else
+         _text = string.format("%s requests medevac at %s",
+                               _downedGroup:getName(), _coordinatesText)
+      end
    end
 
    -- Loop through all the medevac units
@@ -588,6 +869,10 @@ function medevac.checkCloseWoundedGroup(_distance, _heliUnit,_heliName,_woundedG
          -- if you land on them, doesnt matter if they were heading to someone else as you're closer, you win! :)
          if (_distance < medevac.loadDistance) then
             -- GET IN!
+
+            -- remove the beacon frequency
+            medevac.radioBeacons[_woundedGroupName] = nil
+
             local _heliName = _heliUnit:getName()
             local _groups = medevac.inTransitGroups[_heliName]
             local _unitsInHelicopter = unitsInHelicopterCount(_heliName)
@@ -636,6 +921,9 @@ function medevac.checkCloseWoundedGroup(_distance, _heliUnit,_heliName,_woundedG
             else
                medevac.displayMessageToSAR(_heliUnit, string.format("%s: %s, %d wounded aboard! Get us back! He's got %s minutes tops!", _heliName,_woundedLeader:getName(), _woundedCount,_bleedMinutes ),10)
             end
+
+            -- remove the beacon frequency
+            medevac.radioBeacons[_woundedGroupName] = nil
             
             timer.scheduleFunction(medevac.scheduledSARFlight,
                                    {heliName = _heliUnit:getName(),
@@ -692,6 +980,8 @@ function medevac.checkGroupNotKIA(_woundedGroup,_woundedGroupName,  _heliUnit,_h
          --DEAD
 
          medevac.displayToAllSAR(string.format("%s is KIA ", _woundedGroupName), _heliUnit:getCoalition(),_heliName)
+         -- remove the beacon frequency
+         medevac.radioBeacons[_woundedGroupName] = nil
       end
 
       --     medevac.displayMessageToSAR(_heliUnit, string.format("%s: %s is dead", _heliName,_woundedGroupName ),10)
@@ -1116,13 +1406,13 @@ function medevac.getPositionOfWounded(_woundedGroup)
 
    local _coordinatesText = ""
    if medevac.coordtype == 0 then -- Lat/Long DMTM
-      _coordinatesText = string.format("%s", mist.getLLString({units = _woundedTable, acc = 3, DMS = 0}))
+      _coordinatesText = string.format("%s", mist.getLLString({units = _woundedTable, acc = medevac.coordaccuracy, DMS = 0}))
 
    elseif medevac.coordtype == 1 then -- Lat/Long DMS
-      _coordinatesText = string.format("%s", mist.getLLString({units = _woundedTable, acc = 3, DMS = 1}))
+      _coordinatesText = string.format("%s", mist.getLLString({units = _woundedTable, acc = medevac.coordaccuracy, DMS = 1}))
 
    elseif medevac.coordtype == 2 then -- MGRS
-      _coordinatesText = string.format("%s", mist.getMGRSString({units = _woundedTable, acc = 3}))
+      _coordinatesText = string.format("%s", mist.getMGRSString({units = _woundedTable, acc = medevac.coordaccuracy}))
 
    elseif medevac.coordtype == 3 then -- Bullseye Imperial
       _coordinatesText = string.format("bullseye %s", mist.getBRString({units = _woundedTable, ref = coalition.getMainRefPoint(_woundedGroup:getCoalition()), alt = 0}))
@@ -1156,6 +1446,9 @@ function medevac.displayActiveSAR(_unitName)
          local _coordinatesText = medevac.getPositionOfWounded(_woundedGroup[1]:getGroup())
 
          _msg = string.format("%s\n%s at %s", _msg, _groupName, _coordinatesText)
+         if medevac.radioBeacons[_groupName] then
+            _msg = string.format("%s with beacon at %d Mhz", _msg, medevac.radioBeacons[_groupName])
+         end
       end
    end
    _msg = string.format("%s\nYou have %d from a maximum of %d wounded onboard",
