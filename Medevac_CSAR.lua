@@ -490,7 +490,7 @@ medevac.addBeaconToGroup = function(_woundedGroupName)
    -- group is still wounded but not yet moving
    if medevac.woundedGroups[_woundedGroupName] and not medevac.woundedMoving[_woundedGroupName] then
     env.info(string.format("Adding beacon to group %s at %d", _woundedGroupName, _freq))
-    radiogen.BeaconFM(_woundedGroupName, _freq, "Atmospheric.ogg")
+    radiogen.BeaconFM(_woundedGroupName, _freq, "BeatTone.ogg")
    end
 
    return _freq
