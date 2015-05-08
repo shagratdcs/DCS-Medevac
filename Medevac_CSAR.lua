@@ -903,8 +903,12 @@ function medevac.checkCloseWoundedGroup(_distance, _heliUnit,_heliName,_woundedG
             Group.destroy(_woundedLeader:getGroup())
 
             local _bleedTime = medevac.getBleedTime(_heliUnit)
-            local _bleedMinutes = math.floor((_bleedTime/60) + .5) + math.random(1,5) --calculate minutes for message with a random misjudgement of 1 to 5 minutes (I'm evil, I know) ;-) , shagrat
-            --NO MASH
+            local _bleedMsg = nil -- message with a human time description , shagrat
+					--judge a rough timeframe
+					if _bleedTime < 1201 then _bleedMsg = "This is bad! Hurry!" end
+					if _bleedTime > 1200 then _bleedMsg = "We've got half an hour tops!" end	-- 20min+
+					if _bleedTime > 2400 then _bleedMsg = "We have an hour at most!" end 	-- 40min+
+					if _bleedTime > 4200 then _bleedMsg = "He's doing fine! Let's go!" end 	-- 70min+  
             
             if _bleedTime == -1 then
                medevac.displayMessageToSAR(_heliUnit, string.format("%s: Damn! We lost him!", _heliName ),10)
@@ -914,9 +918,9 @@ function medevac.checkCloseWoundedGroup(_distance, _heliUnit,_heliName,_woundedG
             -- will have bled out after  timer.getTime() >_bleedTime + timer.getTime()
 
             if _woundedCount > 1 then
-               medevac.displayMessageToSAR(_heliUnit, string.format("%s: %s, %d wounded aboard! Get us back! We've got %s minutes tops!", _heliName,_woundedGroupName, _woundedCount, _bleedMinutes ),10) --use minutes for message, shagrat
+               medevac.displayMessageToSAR(_heliUnit, string.format("%s: %s, %d wounded aboard! %s ", _heliName,_woundedGroupName, _woundedCount, _bleedMsg ),15) 
             else
-               medevac.displayMessageToSAR(_heliUnit, string.format("%s: %s, %d wounded aboard! Get us back! He's got %s minutes tops!", _heliName,_woundedLeader:getName(), _woundedCount,_bleedMinutes ),10)
+               medevac.displayMessageToSAR(_heliUnit, string.format("%s: %s, He's aboard! %s", _heliName,_woundedLeader:getName(), _bleedMsg ),15)
             end
 
             -- remove the beacon frequency
