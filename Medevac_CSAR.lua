@@ -43,6 +43,8 @@ radiogen = {}
 radiogen.radioTime = 30	-- time duration for AM/FM messages
 radiogen.radioLoop = 60	-- time for re-setting radio beacons for JIP
 
+medevac.checkinDistance = 50 -- Distance in meters until the ground units check in again with the heli
+
 -- If you set it less than 25 the troops might not move close enough
 
 -- SETTINGS FOR MISSION DESIGNER ^^^^^^^^^^^^^^^^^^^*
@@ -1092,6 +1094,7 @@ function medevac.woundedShouldMoveToHeli(_woundedGroupName,_woundedGroup,_heliNa
             _heliUnit,
             string.format("%s: We are %u meters away and moving towards you! %s",
                           _heliName, _distance, medevac.movingMessage ),5)
+      end
       end
    else
 
