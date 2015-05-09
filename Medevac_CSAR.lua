@@ -1053,6 +1053,7 @@ function medevac.woundedShouldMoveToHeli(_woundedGroupName,_woundedGroup,_heliNa
    --    return
    --end
 
+
    --on the move?
    local _alreadyMoving = medevac.woundedMoving[_woundedGroupName] ~= nil
    if not _alreadyMoving then
