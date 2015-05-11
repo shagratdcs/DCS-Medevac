@@ -1,4 +1,4 @@
--- MEDEVAC Script for DCS, By RagnarDa, DragonShadow & Shagrat & Ciribob 2013, 2014, 2015
+-- MEDEVAC Script for DCS, By RagnarDa, DragonShadow, Shagrat, Audax & Ciribob 2013, 2014, 2015
 
 
 medevac = {}
@@ -20,12 +20,13 @@ medevac.sar_pilots = true -- Set to true to allow for Search & Rescue missions o
 
 medevac.includeInfantry = true -- set to true to include infantry units as casualties, shagrat
 medevac.incInfpercent = 0.8 --percentage of surviving soldiers in infantry unit, before they get added as "survivors" for extraction. Recommend 0.3 (30%) to 0.8 (80%) , shagrat
+medevac.incInfsetparam = false --set to true if injected wounded groups should get settings below (CAREFUL! "true" Can lead to immortal enemy infantry units!!!), shagrat
 
-medevac.max_units = 6 -- Maximum number of groups in a single helicopter
 medevac.immortalcrew = false -- Set to true to make wounded crew immortal
 medevac.invisiblecrew = true -- Set to true to make wounded crew insvisible
-medevac.crewholdfire = true -- Set tot true to have wounded crew hold fire
+medevac.crewholdfire = true -- Set to true to have wounded crew hold fire
 medevac.rpgsoldier = false -- Set to true to spawn one of the wounded as a RPG-carrying soldier
+
 medevac.clonenewgroups = false -- Set to true to spawn in new units (clones) of the rescued unit once they're rescued back to the MASH.
 medevac.maxbleedtimemultiplier = 1.6 -- Minimum time * multiplier = Maximum time that the wounded will bleed in the transport before dying
 medevac.cruisespeed = 30 -- Used for calculating distance/speed = Minimum time from medevac point to reaching MASH.
@@ -35,6 +36,7 @@ medevac.minlandtime = 360 -- Minimum time * medevac.pilotperformance < medevac.m
 medevac.pilotperformance = 0.20 -- Multiplier on how much of the given time pilot is expected to have left when reaching the MASH (On average)
 medevac.messageTime = 15 -- Time to show the intial wounded message for in seconds
 
+medevac.max_units = 6 -- Maximum number of wounded that can board a single helicopter
 medevac.maxWoundedAmount = 4 -- Number of wounded Spawned from a dead vehicle. Must be minimum 2(!) recommended 3-5, shagrat
 medevac.movingMessage = "Steady, wounded are on their way!"
 medevac.checkinDistance = 50 -- Distance in meters until the ground units check in again with the heli
@@ -1427,13 +1429,15 @@ function medevac.injectWoundedGroup(_groupName,_isPilot)
     local _spawnedGroup = Group.getByName(_groupName)
 
     if _spawnedGroup ~= nil and _spawnedGroup:getUnit(1) then
+			
+			if medevac.incInfsetparam == true then
+			medevac.addSpecialParametersToGroup(_spawnedGroup)
+			end
+			
+			--Set original group to empty string so mist doesnt respawn them if that option is enabled
+			medevac.woundedGroups[_spawnedGroup:getName()] = { originalGroup = "", side = _spawnedGroup:getCoalition() }
 
-        medevac.addSpecialParametersToGroup(_spawnedGroup)
-
-        --Set original group to empty string so mist doesnt respawn them if that option is enabled
-        medevac.woundedGroups[_spawnedGroup:getName()] = { originalGroup = "", side = _spawnedGroup:getCoalition() }
-
-        medevac.initSARForGroup(_spawnedGroup, _isPilot)
+			medevac.initSARForGroup(_spawnedGroup, _isPilot)
 
     else
 
