@@ -43,7 +43,7 @@ medevac.checkinDistance = 50 -- Distance in meters until the ground units check 
 medevac.loadDistance = 25 -- configure distance for troops to get in helicopter in meters. If you set it less than 25 the troops might not move close enough
 
 
-medevac.radioBeaconChance = 50 -- chance that the troops can set up a radio beacon
+medevac.radioBeaconChance = 10 -- chance that the troops can set up a radio beacon
 medevac.radioSoundFile = "BeatTone.ogg"
 
 radiogen = {}
@@ -1122,12 +1122,15 @@ function medevac.woundedShouldMoveToHeli(_woundedGroupName,_woundedGroup,_heliNa
       if (not _alreadyMoving) or (_lastCheckin - _distance >= medevac.checkinDistance) then
 
          -- update last checkin
-         medevac.woundedMoving[_woundedGroupName].lastCheckin = _distance
-
-         --possible issue if another heli lands nearby? they are alread heading to a differnt one
+			if medevac.woundedMoving[_woundedGroupName].lastCheckin > 190 then _distance = "over 200" end
+			if medevac.woundedMoving[_woundedGroupName].lastCheckin < 190 then _distance = "some 150" end
+			if medevac.woundedMoving[_woundedGroupName].lastCheckin < 120 then _distance = "some 100" end
+			if medevac.woundedMoving[_woundedGroupName].lastCheckin < 70 then _distance = "about 50" end
+			
+			--possible issue if another heli lands nearby? they are alread heading to a differnt one
          medevac.displayMessageToSAR(
             _heliUnit,
-            string.format("%s: We are %u meters away and moving towards you! %s",
+            string.format("%s: We are %s meters away and moving towards you! %s",
                           _heliName, _distance, medevac.movingMessage ),5)
       end
       
