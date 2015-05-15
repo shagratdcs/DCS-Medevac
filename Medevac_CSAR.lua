@@ -12,15 +12,15 @@ medevac.redsmokecolor = 1 -- Color of smokemarker for red side, 0 is green, 1 is
 medevac.requestdelay = 10 -- Time in seconds before the survivors will request Medevac
 medevac.coordtype = 2 -- Use Lat/Long DDM (0), Lat/Long DMS (1), MGRS (2), Bullseye imperial (3) or Bullseye metric (4) for coordinates.
 medevac.coordaccuracy = 3 -- Precision of the reported coordinates, see MIST-docs at http://wiki.hoggit.us/view/GetMGRSString
-                          -- only applies to _non_ bullseye coords
+							-- only applies to _non_ bullseye coords
 medevac.bluecrewsurvivepercent = 100 -- Percentage of blue crews that will make it out of their vehicles. 100 = all will survive.
 medevac.redcrewsurvivepercent = 0 -- Percentage of red crews that will make it out of their vehicles. 100 = all will survive.
 
 medevac.sar_pilots = true -- Set to true to allow for Search & Rescue missions of downed pilots
 
 medevac.includeInfantry = true -- set to true to include infantry units as casualties, shagrat
-medevac.incInfpercent = 0.8 --percentage of surviving soldiers in infantry unit, before they get added as "survivors" for extraction. Recommend 0.3 (30%) to 0.8 (80%) , shagrat
-medevac.incInfsetparam = false --set to true if injected wounded groups should get settings below (CAREFUL! "true" Can lead to immortal enemy infantry units!!!), shagrat
+medevac.incInfpercent = 60 --percentage of surviving soldiers in infantry unit, before they get added as "survivors" for extraction. Recommend 30 (30%) to 80 (80%) , shagrat
+medevac.incInfsetparam = true --set to true if injected wounded groups should get settings below (CAREFUL! "true" Can lead to immortal enemy infantry units!!!), shagrat
 
 medevac.immortalcrew = false -- Set to true to make wounded crew immortal
 medevac.invisiblecrew = true -- Set to true to make wounded crew insvisible
@@ -40,7 +40,7 @@ medevac.max_units = 6 -- Maximum number of wounded that can board a single helic
 medevac.maxWoundedAmount = 4 -- Number of wounded Spawned from a dead vehicle. Must be minimum 2(!) recommended 3-5, shagrat
 medevac.movingMessage = "Steady, wounded are on their way!"
 medevac.checkinDistance = 50 -- Distance in meters until the ground units check in again with the heli
-medevac.loadDistance = 25 -- configure distance for troops to get in helicopter in meters
+medevac.loadDistance = 25 -- configure distance for troops to get in helicopter in meters. If you set it less than 25 the troops might not move close enough
 
 
 medevac.radioBeaconChance = 50 -- chance that the troops can set up a radio beacon
@@ -49,10 +49,6 @@ medevac.radioSoundFile = "BeatTone.ogg"
 radiogen = {}
 radiogen.radioTime = 30	-- time duration for AM/FM messages
 radiogen.radioLoop = 60	-- time for re-setting radio beacons for JIP
-
-medevac.checkinDistance = 50 -- Distance in meters until the ground units check in again with the heli
-
--- If you set it less than 25 the troops might not move close enough
 
 -- SETTINGS FOR MISSION DESIGNER ^^^^^^^^^^^^^^^^^^^*
 
@@ -447,7 +443,7 @@ function medevac.eventHandler:onEvent(_event)
                local _country = _unit:getCoalition()
 
                local _survivalPercent = medevac.redcrewsurvivepercent
-               local _randPercent = math.random(1, 99)
+               local _randPercent = math.random(2, 99)
 
                if (_country == 2) then
                   _survivalPercent = medevac.bluecrewsurvivepercent
@@ -463,21 +459,34 @@ function medevac.eventHandler:onEvent(_event)
 				elseif Object.hasAttribute(_unit, "Infantry") and medevac.includeInfantry == true then
 					
 					-- handle normal (non-wounded) infantry and inject them if decimated below medevac.incInfpercent
+					local _incBlue = false
+					local _incRed = false
 					
-					local _infGroup = Group.getName(_unit:getGroup())
-					local _groupHeader = string.sub(_infGroup, 0, 7)
-					 
-					if _groupHeader ~= "Wounded" then
-					
-						local _infCurSize = Group.getSize(_unit:getGroup())
-						local _infOrgSize = Group.getInitialSize(_unit:getGroup())
-						local _survivePercent = _infCurSize / _infOrgSize
-						trigger.action.outText("DEBUG: ".. _infCurSize .."Initial: ".. _infOrgSize, 5) --debug
-						if _survivePercent < medevac.incInfpercent then
-						
-							medevac.injectWoundedGroup(_infGroup, false)
+						if medevac.redcrewsurvivepercent ~= 0 and _unit:getCoalition() == 1 then 
+							_incRed = true 
 						end
-					end
+						if medevac.bluecrewsurvivepercent ~= 0 and _unit:getCoalition() == 2 then 
+							_incBlue = true 
+						end
+					
+					if _incBlue == true or _incRed == true then
+					
+						local _infGroup = Group.getName(_unit:getGroup())
+						local _groupHeader = string.sub(_infGroup, 0, 7)
+						 
+						if _groupHeader ~= "Wounded" then
+						
+							local _infCurSize = Group.getSize(_unit:getGroup())
+							local _infOrgSize = Group.getInitialSize(_unit:getGroup())
+							local _survivePercent = _infCurSize / _infOrgSize
+							--trigger.action.outText("DEBUG: ".. _infCurSize .."Initial: ".. _infOrgSize, 5) --debug
+							if _survivePercent < (medevac.incInfpercent / 100) then
+							
+								medevac.injectWoundedGroup(_infGroup, false)
+							end
+						end
+					
+					end		
 				else
                -- not the right kind of unit
                return false
