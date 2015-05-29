@@ -692,7 +692,8 @@ function medevac.spawnGroup(_deadUnit, _isPilot)
       end
    end
 
-   return coalition.addGroup(_side, Group.Category.GROUND, _group)
+	-- takes a COUNTRY enum not COALITION
+    return coalition.addGroup(_deadUnit:getCountry(), Group.Category.GROUND, _group)
 end
 
 
@@ -1452,7 +1453,7 @@ function medevac.injectWoundedGroup(_groupName,_isPilot)
 
     local _spawnedGroup = Group.getByName(_groupName)
 
-    if _spawnedGroup ~= nil and _spawnedGroup:getUnit(1) then
+    if _spawnedGroup ~= nil and _spawnedGroup:getUnit(1):isActive() then
 			
 			if medevac.incInfsetparam == true then
 			medevac.addSpecialParametersToGroup(_spawnedGroup)
