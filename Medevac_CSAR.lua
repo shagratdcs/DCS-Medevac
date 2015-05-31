@@ -4,7 +4,7 @@
 medevac = {}
 
 -- SETTINGS FOR MISSION DESIGNER vvvvvvvvvvvvvvvvvv
-medevac.medevacunits = {"Chevy61", "Chevy62", "Chevy63", "Chevy64", "Chevy71"} -- List of all the MEDEVAC _UNIT NAMES_ (the line where it says "Pilot" in the ME)!
+medevac.medevacunits = {"Chevy61", "Chevy62", "Chevy63", "Chevy64", "Chevy71, Chevy81"} -- List of all the MEDEVAC _UNIT NAMES_ (the line where it says "Pilot" in the ME)!
 medevac.bluemash = {"BlueMASH#1", "BlueMASH#2", "BlueMASH#3"} -- The unit that serves as MASH for the blue side
 medevac.redmash = {"RedMASH #1"} -- The unit that serves as MASH for the red side
 medevac.bluesmokecolor = 0 -- Color of smokemarker for blue side, 0 is green, 1 is red, 2 is white, 3 is orange and 4 is blue
@@ -36,13 +36,13 @@ medevac.minlandtime = 360 -- Minimum time * medevac.pilotperformance < medevac.m
 medevac.pilotperformance = 0.20 -- Multiplier on how much of the given time pilot is expected to have left when reaching the MASH (On average)
 medevac.messageTime = 15 -- Time to show the intial wounded message for in seconds
 
-medevac.maxWoundedAmount = 4 -- Number of wounded Spawned from a dead vehicle. Must be minimum 2(!) recommended 3-5, shagrat
+medevac.maxWoundedAmount = 5 -- Number of wounded Spawned from a dead vehicle. Must be minimum 2(!) recommended 3-5, shagrat
 medevac.movingMessage = "Steady, wounded are on their way!"
 medevac.checkinDistance = 50 -- Distance in meters until the ground units check in again with the heli
 medevac.loadDistance = 25 -- configure distance for troops to get in helicopter in meters. If you set it less than 25 the troops might not move close enough
 
 
-medevac.radioBeaconChance = 10 -- chance that the troops can set up a radio beacon
+medevac.radioBeaconChance = 30 -- chance that the troops can set up a radio beacon
 medevac.radioSoundFile = "BeatTone.ogg"
 
 radiogen = {}
