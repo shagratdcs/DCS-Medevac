@@ -20,7 +20,7 @@ medevac.sar_pilots = true -- Set to true to allow for Search & Rescue missions o
 
 medevac.includeInfantry = true -- set to true to include infantry units as casualties, shagrat
 medevac.incInfpercent = 60 --percentage of surviving soldiers in infantry unit, before they get added as "survivors" for extraction. Recommend 30 (30%) to 80 (80%) , shagrat
-medevac.incInfsetparam = true --set to true if injected wounded groups should get settings below (CAREFUL! "true" Can lead to immortal enemy infantry units!!!), shagrat
+medevac.incInfsetparam = false --set to true if injected wounded groups should get settings below (CAREFUL! "true" Can lead to immortal enemy infantry units!!!), shagrat
 
 medevac.immortalcrew = false -- Set to true to make wounded crew immortal
 medevac.invisiblecrew = true -- Set to true to make wounded crew insvisible
@@ -563,8 +563,8 @@ medevac.addSpecialParametersToGroup = function(_spawnedGroup)
       params = {
          value = true
       }
-   }
-
+   }   
+		   
    local _controller = _spawnedGroup:getController()
 
    if (medevac.immortalcrew) then
@@ -573,6 +573,10 @@ medevac.addSpecialParametersToGroup = function(_spawnedGroup)
 
    if (medevac.invisiblecrew) then
       Controller.setCommand(_controller, _setInvisible)
+   end
+   -- holdFire!!! Invisible Killers! Shagrat
+   if (medevac.crewholdfire) then
+      _controller:setOption(AI.Option.Ground.id.ROE, AI.Option.Ground.val.ROE.WEAPON_HOLD)
    end
 end
 
