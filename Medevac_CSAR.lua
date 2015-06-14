@@ -4,7 +4,7 @@
 medevac = {}
 
 -- SETTINGS FOR MISSION DESIGNER vvvvvvvvvvvvvvvvvv
-medevac.medevacunits = {"Chevy61", "Chevy62", "Chevy63", "Chevy64", "Chevy71, Chevy81"} -- List of all the MEDEVAC _UNIT NAMES_ (the line where it says "Pilot" in the ME)!
+medevac.medevacunits = {"Chevy61", "Chevy62", "Chevy63", "Chevy64", "Chevy71", "Chevy81"} -- List of all the MEDEVAC _UNIT NAMES_ (the line where it says "Pilot" in the ME)!
 medevac.bluemash = {"BlueMASH#1", "BlueMASH#2", "BlueMASH#3"} -- The unit that serves as MASH for the blue side
 medevac.redmash = {"RedMASH #1"} -- The unit that serves as MASH for the red side
 medevac.bluesmokecolor = 0 -- Color of smokemarker for blue side, 0 is green, 1 is red, 2 is white, 3 is orange and 4 is blue
@@ -22,7 +22,7 @@ medevac.includeInfantry = true -- set to true to include infantry units as casua
 medevac.incInfpercent = 60 --percentage of surviving soldiers in infantry unit, before they get added as "survivors" for extraction. Recommend 30 (30%) to 80 (80%) , shagrat
 medevac.incInfsetparam = false --set to true if injected wounded groups should get settings below (CAREFUL! "true" Can lead to immortal enemy infantry units!!!), shagrat
 
-medevac.immortalcrew = false -- Set to true to make wounded crew immortal
+medevac.immortalcrew = true -- Set to true to make wounded crew immortal
 medevac.invisiblecrew = true -- Set to true to make wounded crew insvisible
 medevac.crewholdfire = true -- Set to true to have wounded crew hold fire
 medevac.rpgsoldier = false -- Set to true to spawn one of the wounded as a RPG-carrying soldier
