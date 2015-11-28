@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 -- MEDEVAC Script for DCS, By RagnarDa, DragonShadow, Shagrat, Audax & Ciribob 2013, 2014, 2015
+=======
+-- MEDEVAC Script for DCS, By RagnarDa, DragonShadow, Shagrat, Ciribob & audax 2013, 2014, 2015
+>>>>>>> refs/remotes/ciribob/master
 
 
 medevac = {}
@@ -17,6 +21,7 @@ medevac.bluecrewsurvivepercent = 100 -- Percentage of blue crews that will make 
 medevac.redcrewsurvivepercent = 0 -- Percentage of red crews that will make it out of their vehicles. 100 = all will survive.
 
 medevac.sar_pilots = true -- Set to true to allow for Search & Rescue missions of downed pilots
+<<<<<<< HEAD
 
 medevac.includeInfantry = true -- set to true to include infantry units as casualties, shagrat
 medevac.incInfpercent = 60 --percentage of surviving soldiers in infantry unit, before they get added as "survivors" for extraction. Recommend 30 (30%) to 80 (80%) , shagrat
@@ -27,6 +32,12 @@ medevac.invisiblecrew = true -- Set to true to make wounded crew insvisible
 medevac.crewholdfire = true -- Set to true to have wounded crew hold fire
 medevac.rpgsoldier = false -- Set to true to spawn one of the wounded as a RPG-carrying soldier
 
+=======
+medevac.immortalcrew = false -- Set to true to make wounded crew immortal
+medevac.invisiblecrew = false -- Set to true to make wounded crew insvisible
+medevac.crewholdfire = false -- Set tot true to have wounded crew hold fire
+medevac.rpgsoldier = true -- Set to true to spawn one of the wounded as a RPG-carrying soldier
+>>>>>>> refs/remotes/ciribob/master
 medevac.clonenewgroups = false -- Set to true to spawn in new units (clones) of the rescued unit once they're rescued back to the MASH.
 medevac.maxbleedtimemultiplier = 1.6 -- Minimum time * multiplier = Maximum time that the wounded will bleed in the transport before dying
 medevac.cruisespeed = 30 -- Used for calculating distance/speed = Minimum time from medevac point to reaching MASH.
@@ -36,12 +47,21 @@ medevac.minlandtime = 360 -- Minimum time * medevac.pilotperformance < medevac.m
 medevac.pilotperformance = 0.20 -- Multiplier on how much of the given time pilot is expected to have left when reaching the MASH (On average)
 medevac.messageTime = 15 -- Time to show the intial wounded message for in seconds
 
+<<<<<<< HEAD
 medevac.maxWoundedAmount = 5 -- Number of wounded Spawned from a dead vehicle. Must be minimum 2(!) recommended 3-5, shagrat
 medevac.movingMessage = "Steady, wounded are on their way!"
+=======
+medevac.movingMessage = "Be there in a jiffy!"
+-- If you set it less than 25 the troops might not move close enough
+medevac.loadDistance = 25 -- configure distance for troops to get in helicopter in meters.
+>>>>>>> refs/remotes/ciribob/master
 medevac.checkinDistance = 50 -- Distance in meters until the ground units check in again with the heli
 medevac.loadDistance = 25 -- configure distance for troops to get in helicopter in meters. If you set it less than 25 the troops might not move close enough
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> refs/remotes/ciribob/master
 medevac.radioBeaconChance = 30 -- chance that the troops can set up a radio beacon
 medevac.radioSoundFile = "BeatTone.ogg"
 
@@ -420,7 +440,11 @@ function medevac.eventHandler:onEvent(_event)
                end
             end
             return
+<<<<<<< HEAD
          elseif ( _event.id == 9 and medevac.sar_pilots == true) then
+=======
+        elseif (_event.id == 9 and medevac.sar_pilots == true) then
+>>>>>>> refs/remotes/ciribob/master
             -- Pilot dead
             trigger.action.outTextForCoalition(_event.initiator:getCoalition(),"All units! We got a ".. _event.initiator:getTypeName() .. " shot down. No Chute! Continue current tasking.", 10)
 
@@ -520,6 +544,7 @@ function medevac.eventHandler:onEvent(_event)
             end
 
             --dont add until we're done processing...
+<<<<<<< HEAD
             --table.insert(medevac.deadUnits,_event.initiator)
          end
                              end, _event)
@@ -528,6 +553,14 @@ function medevac.eventHandler:onEvent(_event)
    end
 end
 
+=======
+            --table.insert(medevac.deadUnits, _event.initiator)
+        end
+    end, _event)
+    if (not status) then
+        env.error(string.format("Error while handling event %s", err), medevac.displayerrordialog)
+    end
+>>>>>>> refs/remotes/ciribob/master
 medevac.addBeaconToGroup = function(_woundedGroupName)
    local _freq
    if medevac.radioBeacons[_woundedGroupName] then
@@ -738,6 +771,7 @@ function medevac.initSARForGroup(_downedGroup, _pilot)
    local _randPercent = math.random(1, 100)
    if _randPercent <= medevac.radioBeaconChance then
       local _freq = medevac.addBeaconToGroup(_downedGroup:getName())
+<<<<<<< HEAD
 
       if (_pilot) then
          _text = string.format("%s requests SAR at %s, beacon at %d Mhz",
@@ -756,6 +790,26 @@ function medevac.initSARForGroup(_downedGroup, _pilot)
       end
    end
 
+=======
+
+      if (_pilot) then
+         _text = string.format("%s requests SAR at %s, beacon at %d Mhz",
+                               _leader:getName(), _coordinatesText, _freq)
+      else
+         _text = string.format("%s requests medevac at %s, beacon at %d Mhz",
+                               _downedGroup:getName(), _coordinatesText, _freq)
+      end
+   else
+      if (_pilot) then
+         _text = string.format("%s requests SAR at %s",
+                               _leader:getName(), _coordinatesText)
+      else
+         _text = string.format("%s requests medevac at %s",
+                               _downedGroup:getName(), _coordinatesText)
+      end
+   end
+
+>>>>>>> refs/remotes/ciribob/master
    -- Loop through all the medevac units
    for x, _heliName in pairs(medevac.medevacunits) do
       local _status, _err = pcall(function (_args)            
@@ -1517,6 +1571,107 @@ end
 
 function medevac.saveLoadout(_unitName)
    local _msg = "Saving loadout:"
+<<<<<<< HEAD
+=======
+
+   local _heli = medevac.getSARHeli(_unitName)
+   
+   if _heli == nil then
+      return
+   end
+   local _type = _heli:getDesc().typeName
+   local _weapons = {}
+   local _ammo = _heli:getAmmo()
+   if _ammo ~= nil then
+    for i, _weapon in pairs(_ammo) do
+       _weapons[_weapon.desc.displayName] = _weapon.count
+    end
+   end
+   local _maxunits
+   if _type == "UH-1H" then
+    -- assume that a slick huey can hold 10 units
+    _maxunits = 10
+    local _minigun = _weapons["M134 7.62"]
+    if _minigun then
+        local _count = _minigun / 3200
+        _msg = string.format("%s\nMinigun : %d", _msg, math.floor(_count))
+        -- with 2 miniguns you get 3 max units for CSAR
+        _maxunits = _maxunits - _count * 2
+        -- minus the door gunners
+        if _count > 2 then _maxunits = _maxunits - 2 end
+    end
+    local _m60 = _weapons["7.62mm"]
+    if _m60 then
+        local _count = _m60 / 750
+        _msg = string.format("%s\nM60 : %d", _msg, math.floor(_count))
+        -- with 2 m60 you can still carry 5 units
+        _maxunits = _maxunits - _count
+    end
+    local _rockets = (_weapons["HYDRA-70 M151"] or 0)
+                   + (_weapons["HYDRA-70 M156 WP"] or 0)
+                   + (_weapons["HYDRA-70 M257"] or 0)
+    if _rockets > 0 then
+        local _count = _rockets / 19
+        _msg = string.format("%s\nRockets : %d", _msg, _rockets)
+        -- allow 2 full launchers, but not more without a penalty
+        _maxunits = _maxunits - math.floor(_count / 2)
+    end
+    _maxunits = math.floor(_maxunits)
+   else 
+    -- if it is not a huey...assume it is a Mi-8
+    _maxunits = 20
+    local _upk = _weapons["23mm HE"]
+    if _upk then
+      local _count = _upk / 250
+      _maxunits = _maxunits - _count
+      _msg = string.format("%s\nUPK pods : %d", _msg, math.floor(_count))
+
+    end
+    local _guv = _weapons["12.7mm"]
+    if _guv then
+      local _count = _guv / 750
+       -- one guv pod for 4 soldiers
+      _maxunits = _maxunits - _count * 4
+      _msg = string.format("%s\nGUV pods : %d", _msg, math.floor(_count))
+    end
+    local _grenades = _weapons["30mm HE"]
+    if _grenades then
+      local _count = _grenades / 300
+      -- one grenade launchers for 4 units
+      _maxunits = _maxunits - _count * 4
+      _msg = string.format("%s\nGrenade launchers : %d", _msg, math.floor(_count))
+
+    end
+    local _bombs = (_weapons["FAB-100"] or 0) * 100
+                 + (_weapons["FAB-250"] or 0) * 250
+                 + (_weapons["SAB-100"] or 0) * 100
+    if _bombs > 0 then
+        -- 100kg of bombs for each soldier
+        _maxunits = _maxunits - _bombs / 100
+        _msg = string.format("%s\nBombs : %d kg", _msg, _bombs)
+
+    end
+    local _rockets = (_weapons["S-8KOM"] or 0)
+                   + (_weapons["S-8OFP2"] or 0)
+                   + (_weapons["S-8OM"] or 0)
+                   + (_weapons["S-8OM"] or 0)
+    if _rockets > 0 then
+       -- 20 rockets for each soldier
+       _maxunits = _maxunits - _rockets / 20
+       _msg = string.format("%s\nRockets : %d", _msg, _rockets)
+
+    end
+   end
+   _msg = string.format("%s\nMaximum units on board: %d", _msg, _maxunits)
+   medevac.displayMessageToSAR(_heli, _msg,20)
+   medevac.max_units[_unitName] = _maxunits
+   return _weapons
+end
+
+-- Displays all active MEDEVACS/SAR
+function medevac.displayActiveSAR(_unitName)
+    local _msg = "Active MEDEVAC/SAR:"
+>>>>>>> refs/remotes/ciribob/master
 
    local _heli = medevac.getSARHeli(_unitName)
    
@@ -1618,6 +1773,7 @@ function medevac.displayActiveSAR(_unitName)
 
    local _heli = medevac.getSARHeli(_unitName)
 
+<<<<<<< HEAD
    if _heli == nil then
       return
    end
@@ -1629,6 +1785,20 @@ function medevac.displayActiveSAR(_unitName)
       local _woundedGroup = medevac.getWoundedGroup(_groupName)
 
       if #_woundedGroup > 0 and (_woundedGroup[1]:getCoalition() == _heliSide) then
+=======
+            _msg = string.format("%s\n%s at %s", _msg, _groupName, _coordinatesText)
+        end
+    end
+         if medevac.radioBeacons[_groupName] then
+            _msg = string.format("%s with beacon at %d Mhz", _msg, medevac.radioBeacons[_groupName])
+         end
+   if medevac.max_units[_unitName] ~= nil then
+      _msg = string.format("%s\nYou have %d from a maximum of %d wounded onboard",
+                           _msg, unitsInHelicopterCount(_unitName), medevac.max_units[_unitName])
+    else
+       _msg = string.format("%s\nYou have not yet saved your loadout")
+   end
+>>>>>>> refs/remotes/ciribob/master
 
          local _coordinatesText = medevac.getPositionOfWounded(_woundedGroup[1]:getGroup())
 
@@ -1680,11 +1850,25 @@ function addMedevacMenuItem()
 
          if medevac.addedTo[_unitName] == nil then
 
+<<<<<<< HEAD
             missionCommands.addCommandForGroup(_unit:getGroup():getID(),
                                                "Active MEDEVAC/SAR",
                                                nil,
                                                medevac.displayActiveSAR,
                                                _unitName)
+=======
+                missionCommands.addCommandForGroup(_unit:getGroup():getID(),
+                    "Active MEDEVAC/SAR",
+                    nil,
+                    medevac.displayActiveSAR,
+                                               _unitName)
+
+            missionCommands.addCommandForGroup(_unit:getGroup():getID(),
+                                               "Save loadout for MEDEVAC/SAR",
+                                               nil,
+                                               medevac.saveLoadout,
+                    _unitName)
+>>>>>>> refs/remotes/ciribob/master
 
             missionCommands.addCommandForGroup(_unit:getGroup():getID(),
                                                "Save loadout for MEDEVAC/SAR",
